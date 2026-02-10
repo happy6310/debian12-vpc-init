@@ -17,7 +17,7 @@
 
 ```bash
 # 使用 root 用户运行
-bash <(curl -sL https://raw.githubusercontent.com/yourusername/debian12-vpc-init/main/install.sh)
+bash <(curl -sL https://raw.githubusercontent.com/happy6310/debian12-vpc-init/main/install.sh)
 
 
 

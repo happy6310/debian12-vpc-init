@@ -4,8 +4,8 @@
 
 set -e
 
-REPO_URL="https://github.com/yourusername/debian12-vpc-init"
-SCRIPT_URL="https://raw.githubusercontent.com/yourusername/debian12-vpc-init/main/init.sh"
+REPO_URL="https://github.com/happy6310/debian12-vpc-init"
+SCRIPT_URL="https://raw.githubusercontent.com/happy6310/debian12-vpc-init/main/init.sh"
 
 echo "下载 Debian 12 VPC 初始化脚本..."
 echo "仓库: $REPO_URL"
