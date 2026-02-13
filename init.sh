@@ -1,7 +1,7 @@
 #!/bin/bash
 # Debian 12 VPC 初始化脚本
 # GitHub: https://github.com/yourusername/debian12-vpc-init
-# 使用: bash <(curl -sL https://raw.githubusercontent.com/yourusername/debian12-vpc-init/main/init.sh)
+# 使用: bash <(curl -sL https://raw.githubusercontent.com/happy6310/debian12-vpc-init/main/init.sh)
 
 set -e
 
@@ -72,6 +72,8 @@ install_dependencies() {
     
     # 更新包列表
     apt-get update
+    
+    apt-get -yq upgrade
     
     # 基础工具
     apt-get install -y curl wget sudo socat git vim unzip ufw \
