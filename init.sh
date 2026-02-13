@@ -253,6 +253,83 @@ EOF
     log_success "系统优化完成"
 }
 
+
+
+check_env_variables() {
+    log_info "检查关键系统变量..."
+    if [ -z "$SERVER_FQDN" ]; then
+        log_error "环境变量 SERVER_FQDN 未定义！请先设置，例如:"
+        log_error "export SERVER_FQDN=q1.happyliu.top"
+        exit 1
+    fi
+    # 自动拆分
+    export SERVER_NODE=${SERVER_FQDN%%.*}
+    export SERVER_DOMAIN=${SERVER_FQDN#*.}
+    export SERVER_HOSTNAME=$SERVER_FQDN
+    log_success "关键环境变量已定义: $SERVER_FQDN"
+}
+
+
+
+enable_bbr() {
+    log_info "启用 BBR 拥塞控制..."
+    grep -q "tcp_congestion_control=bbr" /etc/sysctl.conf || echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+    grep -q "tcp_congestion_control=bbr" /etc/sysctl.conf || echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+    sysctl -p
+    log_success "BBR 已启用"
+}
+
+
+install_nginx_acme() {
+    log_info "安装 Nginx..."
+    apt-get install -y nginx
+    systemctl enable nginx
+    systemctl restart nginx
+    log_success "Nginx 安装完成"
+
+    # ACME 安装
+    log_info "安装 acme.sh..."
+    curl -s https://get.acme.sh | sh
+    export PATH="$HOME/.acme.sh:$PATH"
+    acme.sh --set-default-ca --server letsencrypt
+
+    mkdir -p /root/cert
+
+    # 检测 80 端口
+    if ss -lnt | grep -q ":80 "; then
+        log_warning "80 端口被占用，使用 Nginx 模式申请证书"
+        mkdir -p /var/www/html/.well-known/acme-challenge
+        chown -R www-data:www-data /var/www/html
+        acme.sh --issue -d "$SERVER_FQDN" -w /var/www/html -k ec-256 --force
+    else
+        log_info "80 端口空闲，使用 standalone 模式申请证书"
+        acme.sh --issue -d "$SERVER_FQDN" --standalone -k ec-256 --force
+    fi
+
+    # 安装证书到统一目录
+    acme.sh --install-cert -d "$SERVER_FQDN" \
+        --key-file /root/cert/private.key \
+        --fullchain-file /root/cert/cert.crt --ecc
+    log_success "证书申请并安装完成，路径: /root/cert"
+}
+
+
+install_3x_ui() {
+    log_info "安装 3x-ui..."
+    bash <(curl -Ls https://raw.githubusercontent.com/mhsanaei/3x-ui/master/install.sh) <<EOF
+y
+8443
+3
+$SERVER_FQDN
+/root/cert/cert.crt
+/root/cert/private.key
+EOF
+    log_success "3x-ui 安装完成"
+}
+
+
+
+
 install_optional_tools() {
     log_info "安装可选工具..."
     
@@ -311,13 +388,18 @@ main() {
     
     # 执行步骤
     local steps=(
+        "check_env_variables:检查环境变量"
         "install_dependencies:安装依赖包"
         "configure_ssh:配置SSH服务"
         "configure_firewall:配置防火墙"
         "configure_system:系统优化"
-        "install_optional_tools:可选工具安装"
-    )
-    
+        "enable_bbr:启用BBR"
+        "install_nginx_acme:安装nginx和ACME"
+        "install_3x_ui:安装3x-ui"
+  )
+   # "install_optional_tools:可选工具安装"
+
+   
     for step in "${steps[@]}"; do
         local func="${step%%:*}"
         local desc="${step#*:}"
